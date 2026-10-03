@@ -1,0 +1,71 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --font-sans: "Inter", system-ui, -apple-system, sans-serif;
+    --font-serif: "Source Serif 4", Georgia, serif;
+  }
+
+  html {
+    scroll-behavior: smooth;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    @apply bg-white text-ink antialiased;
+  }
+
+  ::selection {
+    @apply bg-navy-900 text-white;
+  }
+
+  h1, h2, h3, h4 {
+    @apply text-ink font-semibold;
+    text-wrap: balance;
+  }
+
+  p { text-wrap: pretty; }
+}
+
+@layer components {
+  .container-tight { @apply container max-w-5xl; }
+  .container-wide  { @apply container max-w-7xl; }
+
+  .grid-lines {
+    background-image: linear-gradient(
+      to right,
+      rgba(13, 21, 38, 0.05) 1px,
+      transparent 1px
+    );
+    background-size: 96px 100%;
+  }
+
+  .eyebrow-line::before {
+    content: "";
+    @apply inline-block w-8 h-px bg-brass align-middle mr-3 mb-1;
+  }
+
+  .rule-brass {
+    @apply block w-12 h-[2px] bg-brass;
+  }
+
+  .section-reveal {
+    opacity: 0;
+    transform: translateY(16px);
+    transition: opacity 0.8s ease-out, transform 0.8s ease-out;
+  }
+  .section-reveal.in-view {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
