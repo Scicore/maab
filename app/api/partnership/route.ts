@@ -1,37 +1,62 @@
 import { NextResponse } from "next/server";
+import { z } from "zod";
+import { prisma } from "@/lib/db";
 
-// Placeholder API route for partnership inquiries.
-// Wire this to an email service or CRM once MAAB has confirmed the destination.
+const schema = z.object({
+  name: z.string().min(1).max(200),
+  company: z.string().min(1).max(200),
+  position: z.string().max(200).optional().nullable(),
+  country: z.string().min(1).max(100),
+  email: z.string().email().max(200),
+  phone: z.string().max(50).optional().nullable(),
+  partnershipType: z.string().min(1).max(100),
+  message: z.string().min(1).max(5000),
+});
 
 export async function POST(req: Request) {
   try {
     const body = await req.json();
+    const parsed = schema.safeParse(body);
 
-    const required = ["name", "company", "country", "email", "partnershipType", "message"];
-    for (const field of required) {
-      if (!body[field] || String(body[field]).trim().length === 0) {
-        return NextResponse.json(
-          { ok: false, error: `Missing required field: ${field}` },
-          { status: 400 }
-        );
-      }
+    if (!parsed.success) {
+      return NextResponse.json(
+        { ok: false, error: "Invalid form data" },
+        { status: 400 }
+      );
     }
 
-    // TODO: integrate email / CRM here.
+    const data = parsed.data;
 
-    console.log("[partnership] new submission", {
-      name: body.name,
-      company: body.company,
-      country: body.country,
-      email: body.email,
-      partnershipType: body.partnershipType,
+    await prisma.partnershipInquiry.create({
+      data: {
+        name: data.name,
+        company: data.company,
+        position: data.position ?? null,
+        country: data.country,
+        email: data.email,
+        phone: data.phone ?? null,
+        partnershipType: data.partnershipType,
+        message: data.message,
+        ipAddress:
+          req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? null,
+        userAgent: req.headers.get("user-agent") ?? null,
+      },
+    });
+
+    await prisma.notification.create({
+      data: {
+        kind: "PARTNERSHIP_INQUIRY",
+        title: "New partnership inquiry",
+        body: `${data.name} from ${data.company} (${data.country})`,
+        link: "/admin/partnerships",
+      },
     });
 
     return NextResponse.json({ ok: true });
   } catch (err) {
     console.error("[partnership] error", err);
     return NextResponse.json(
-      { ok: false, error: "Invalid request" },
+      { ok: false, error: "Server error" },
       { status: 500 }
     );
   }

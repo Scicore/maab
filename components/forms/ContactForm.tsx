@@ -6,12 +6,45 @@ import { Button } from "@/components/ui/Button";
 
 export function ContactForm() {
   const [status, setStatus] = useState<"idle" | "submitting" | "success" | "error">("idle");
+  const [errorMsg, setErrorMsg] = useState("");
 
   async function onSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setStatus("submitting");
-    await new Promise((r) => setTimeout(r, 800));
-    setStatus("success");
+    setErrorMsg("");
+
+    const form = e.currentTarget;
+    const data = new FormData(form);
+
+    const payload = {
+      name: String(data.get("name") || ""),
+      email: String(data.get("email") || ""),
+      company: String(data.get("company") || "") || null,
+      phone: String(data.get("phone") || "") || null,
+      subject: String(data.get("subject") || ""),
+      message: String(data.get("message") || ""),
+    };
+
+    try {
+      const res = await fetch("/api/contact", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      const json = await res.json();
+
+      if (!res.ok || !json.ok) {
+        throw new Error(json.error || "Submission failed");
+      }
+
+      setStatus("success");
+      form.reset();
+    } catch (err) {
+      setErrorMsg(
+        err instanceof Error ? err.message : "Something went wrong. Please try again."
+      );
+      setStatus("error");
+    }
   }
 
   if (status === "success") {
@@ -41,15 +74,18 @@ export function ContactForm() {
       </div>
       <Field label="Subject" required><input type="text" name="subject" required className={inputClass} /></Field>
       <Field label="Message" required><textarea name="message" rows={6} required className={inputClass} /></Field>
+
+      {status === "error" && (
+        <div className="text-sm text-red-700 bg-red-50 border border-red-200 rounded-md px-3.5 py-2.5">
+          {errorMsg}
+        </div>
+      )}
+
       <div className="pt-2">
         <Button type="submit" size="lg" disabled={status === "submitting"} className="w-full sm:w-auto">
           {status === "submitting" ? (<><Loader2 className="w-4 h-4 animate-spin" />Sending…</>) : ("Send Message")}
         </Button>
       </div>
-      <p className="text-xs text-ink-muted pt-2">
-        By submitting this form, you agree to MAAB contacting you regarding your inquiry.
-        Spam protection may be applied at the point of submission.
-      </p>
     </form>
   );
 }
