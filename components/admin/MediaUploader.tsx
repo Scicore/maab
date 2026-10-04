@@ -30,10 +30,19 @@ export function MediaUploader({
   const [error, setError] = useState("");
   const [uploaded, setUploaded] = useState<UploadedMedia | null>(value ?? null);
 
-  async function handleFile(file: File) {
+   async function handleFile(file: File) {
     setError("");
-    setUploading(true);
 
+    // Client-side filename check: reject non-ASCII before uploading
+    if (/[^\x20-\x7E]/.test(file.name)) {
+      setError(
+        "Filename contains non-English characters (emoji, arrows, etc.). Please rename the file and try again."
+      );
+      if (inputRef.current) inputRef.current.value = "";
+      return;
+    }
+
+    setUploading(true);
     const fd = new FormData();
     fd.append("file", file);
     fd.append("folder", folder);

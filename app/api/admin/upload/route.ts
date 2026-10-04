@@ -82,13 +82,22 @@ export async function POST(req: Request) {
         { status: 400 }
       );
     }
-
     const buffer = Buffer.from(await file.arrayBuffer());
-    const safeName = sanitizeFilename(file.name || "file");
+
+    // Aggressively sanitize filename: strip ALL non-ASCII characters.
+    // Filenames must be Latin-1 safe for HTTP header transport.
+    const rawName = file.name || "file";
+    const asciiName = rawName
+      .normalize("NFKD")
+      .replace(/[^\x20-\x7E]/g, "") // strip everything non-printable-ASCII
+      .replace(/[^\w.\-]/g, "_")
+      .replace(/_+/g, "_")
+      .slice(-80); // keep last 80 chars (preserves extension)
+
+    const safeName = asciiName || "file";
     const timestamp = Date.now().toString(36);
     const random = Math.random().toString(36).slice(2, 8);
     const path = `${folder}/${timestamp}-${random}-${safeName}`;
-
     const { error: uploadError } = await supabaseAdmin.storage
       .from(STORAGE_BUCKET)
       .upload(path, buffer, {
