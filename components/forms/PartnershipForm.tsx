@@ -34,17 +34,11 @@ export function PartnershipForm() {
         body: JSON.stringify(payload),
       });
       const json = await res.json();
-
-      if (!res.ok || !json.ok) {
-        throw new Error(json.error || "Submission failed");
-      }
-
+      if (!res.ok || !json.ok) throw new Error(json.error || "Submission failed");
       setStatus("success");
       form.reset();
     } catch (err) {
-      setErrorMsg(
-        err instanceof Error ? err.message : "Something went wrong. Please try again."
-      );
+      setErrorMsg(err instanceof Error ? err.message : "Something went wrong.");
       setStatus("error");
     }
   }

@@ -19,7 +19,6 @@ export default async function AdminMessagesPage() {
       </div>
 
       <div className="grid lg:grid-cols-2 gap-8">
-        {/* CONTACT */}
         <div>
           <div className="flex items-center gap-2 mb-4">
             <Mail className="w-4 h-4 text-slate-500" />
@@ -45,9 +44,7 @@ export default async function AdminMessagesPage() {
                       {new Date(m.createdAt).toLocaleDateString()}
                     </div>
                   </div>
-                  {m.company && (
-                    <div className="text-xs text-slate-500 mb-2">Company: {m.company}</div>
-                  )}
+                  {m.company && <div className="text-xs text-slate-500 mb-2">Company: {m.company}</div>}
                   <div className="text-sm font-medium text-slate-700 mb-2">{m.subject}</div>
                   <p className="text-sm text-slate-600 whitespace-pre-wrap">{m.message}</p>
                 </div>
@@ -56,7 +53,6 @@ export default async function AdminMessagesPage() {
           )}
         </div>
 
-        {/* PARTNERSHIP */}
         <div>
           <div className="flex items-center gap-2 mb-4">
             <Building2 className="w-4 h-4 text-slate-500" />

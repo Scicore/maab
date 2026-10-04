@@ -17,10 +17,7 @@ export async function POST(req: Request) {
     const parsed = schema.safeParse(body);
 
     if (!parsed.success) {
-      return NextResponse.json(
-        { ok: false, error: "Invalid form data" },
-        { status: 400 }
-      );
+      return NextResponse.json({ ok: false, error: "Invalid form data" }, { status: 400 });
     }
 
     const data = parsed.data;
@@ -33,8 +30,7 @@ export async function POST(req: Request) {
         phone: data.phone ?? null,
         subject: data.subject,
         message: data.message,
-        ipAddress:
-          req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? null,
+        ipAddress: req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? null,
         userAgent: req.headers.get("user-agent") ?? null,
       },
     });
@@ -51,9 +47,6 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: true });
   } catch (err) {
     console.error("[contact] error", err);
-    return NextResponse.json(
-      { ok: false, error: "Server error" },
-      { status: 500 }
-    );
+    return NextResponse.json({ ok: false, error: "Server error" }, { status: 500 });
   }
 }
