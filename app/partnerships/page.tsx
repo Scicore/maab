@@ -1,8 +1,13 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { Section, SectionHeader } from "@/components/ui/Section";
 import { Card } from "@/components/ui/Card";
 import { Handshake, Globe2, TrendingUp, Users } from "lucide-react";
 import { PartnershipForm } from "@/components/forms/PartnershipForm";
+import { prisma } from "@/lib/db";
+import { supabaseAdmin, STORAGE_BUCKET } from "@/lib/supabase-admin";
+
+export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
   title: "Partnerships",
@@ -18,7 +23,33 @@ const pillars = [
   { icon: Users, title: "Professional Networks", text: "Connections with professionals, advisors, and specialists where relevant." },
 ];
 
-export default function PartnershipsPage() {
+async function getPublishedPartners() {
+  const partners = await prisma.partner.findMany({
+    where: { status: "PUBLISHED" },
+    orderBy: [{ displayOrder: "asc" }, { createdAt: "desc" }],
+    take: 12,
+  });
+
+  // Generate signed URLs for logos
+  const withUrls = await Promise.all(
+    partners.map(async (p) => {
+      let logoUrl: string | null = null;
+      if (p.logoPath && supabaseAdmin) {
+        const { data } = await supabaseAdmin.storage
+          .from(STORAGE_BUCKET)
+          .createSignedUrl(p.logoPath, 60 * 60 * 24); // 24h
+        logoUrl = data?.signedUrl ?? null;
+      }
+      return { ...p, logoUrl };
+    })
+  );
+
+  return withUrls;
+}
+
+export default async function PartnershipsPage() {
+  const partners = await getPublishedPartners();
+
   return (
     <>
       <section className="bg-navy-900 text-white">
@@ -62,6 +93,76 @@ export default function PartnershipsPage() {
       </Section>
 
       <Section className="bg-sea-100">
+        <SectionHeader
+          eyebrow="Our Partners"
+          title="Working with organizations across markets."
+          description={
+            partners.length === 0
+              ? "Verified partner information will be published here as it becomes available."
+              : "MAAB works with the following organizations across international markets."
+          }
+        />
+
+        {partners.length === 0 ? (
+          <div className="mt-14 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+            {Array.from({ length: 8 }).map((_, i) => (
+              <div
+                key={i}
+                className="aspect-[3/2] flex items-center justify-center border border-dashed border-line rounded-md bg-white/70 text-[0.6875rem] uppercase tracking-[0.14em] text-ink-muted"
+              >
+                Partner Logo
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="mt-14 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-5">
+            {partners.map((partner) => {
+              const inner = (
+                <div className="bg-white border border-line rounded-lg p-6 h-full flex flex-col items-center justify-center text-center transition-all duration-300 hover:-translate-y-1 hover:shadow-elevated hover:border-navy-300">
+                  {partner.logoUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={partner.logoUrl}
+                      alt={partner.name}
+                      className="h-14 w-auto object-contain mb-4"
+                    />
+                  ) : (
+                    <div className="h-14 w-14 rounded-md bg-navy-900 text-white flex items-center justify-center text-lg font-semibold mb-4">
+                      {partner.name.charAt(0).toUpperCase()}
+                    </div>
+                  )}
+                  <div className="font-medium text-ink text-sm leading-snug">
+                    {partner.name}
+                  </div>
+                  {partner.country && (
+                    <div className="text-xs text-ink-muted mt-1">
+                      {partner.country}
+                    </div>
+                  )}
+                </div>
+              );
+
+              return partner.website ? (
+                <a
+                  key={partner.id}
+                  href={partner.website}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="block h-full"
+                >
+                  {inner}
+                </a>
+              ) : (
+                <div key={partner.id} className="h-full">
+                  {inner}
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </Section>
+
+      <Section className="bg-white">
         <div className="grid lg:grid-cols-12 gap-12 lg:gap-16 items-start">
           <div className="lg:col-span-5">
             <SectionHeader
