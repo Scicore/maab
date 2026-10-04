@@ -1,8 +1,12 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { Section, SectionHeader } from "@/components/ui/Section";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
-import { Users, Globe2, GraduationCap, Briefcase } from "lucide-react";
+import { Users, Globe2, GraduationCap, Briefcase, MapPin, Clock } from "lucide-react";
+import { prisma } from "@/lib/db";
+
+export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
   title: "Careers",
@@ -18,7 +22,25 @@ const reasons = [
   { icon: Briefcase, title: "Meaningful Roles", text: "Positions with real responsibility and long-term potential." },
 ];
 
-export default function CareersPage() {
+const employmentLabel: Record<string, string> = {
+  FULL_TIME: "Full-time",
+  PART_TIME: "Part-time",
+  CONTRACT: "Contract",
+  INTERNSHIP: "Internship",
+};
+
+const workModeLabel: Record<string, string> = {
+  ONSITE: "On-site",
+  HYBRID: "Hybrid",
+  REMOTE: "Remote",
+};
+
+export default async function CareersPage() {
+  const jobs = await prisma.job.findMany({
+    where: { status: "PUBLISHED" },
+    orderBy: { publishedAt: "desc" },
+  });
+
   return (
     <>
       <section className="bg-navy-900 text-white">
@@ -44,10 +66,7 @@ export default function CareersPage() {
           {reasons.map((r) => {
             const Icon = r.icon;
             return (
-              <Card
-                key={r.title}
-                className="transition-all duration-300 hover:-translate-y-1 hover:shadow-elevated hover:border-navy-300"
-              >
+              <Card key={r.title} className="transition-all duration-300 hover:-translate-y-1 hover:shadow-elevated hover:border-navy-300">
                 <span className="flex h-11 w-11 items-center justify-center rounded-md bg-navy-900 text-white mb-5">
                   <Icon className="w-5 h-5" />
                 </span>
@@ -60,44 +79,60 @@ export default function CareersPage() {
       </Section>
 
       <Section className="bg-sea-100">
-        <div className="grid lg:grid-cols-12 gap-12 lg:gap-20">
-          <div className="lg:col-span-5">
-            <div className="eyebrow-line text-[0.6875rem] font-semibold uppercase tracking-[0.22em] text-brass mb-5">
-              Our People
-            </div>
-            <h2 className="text-h2">A professional, international team.</h2>
-          </div>
-          <div className="lg:col-span-7 space-y-5 text-ink-soft leading-relaxed text-lg">
-            <p>
-              MAAB is built by people who care about their work and the
-              relationships they maintain. Additional detail about the team,
-              culture, and ways of working will be published here as it becomes
-              available.
-            </p>
-          </div>
-        </div>
-      </Section>
-
-      <Section className="bg-white">
         <SectionHeader
           eyebrow="Opportunities"
           title="Current openings"
           description="Verified positions will appear here. When no positions are listed, MAAB is not actively hiring through this page."
         />
-        <Card className="mt-14 !p-14 text-center">
-          <div className="max-w-lg mx-auto">
-            <Briefcase className="w-10 h-10 text-ink-muted mx-auto mb-6" />
-            <h3 className="text-h3 mb-3">There are currently no open positions.</h3>
-            <p className="text-ink-soft leading-relaxed mb-2">
-              Please check back later. When roles are available, they will be
-              published with clear information about the position, location,
-              and requirements.
-            </p>
-            <p className="text-ink-muted text-sm">
-              Speculative applications are accepted through the contact page.
-            </p>
+
+        {jobs.length === 0 ? (
+          <Card className="mt-14 !p-14 text-center">
+            <div className="max-w-lg mx-auto">
+              <Briefcase className="w-10 h-10 text-ink-muted mx-auto mb-6" />
+              <h3 className="text-h3 mb-3">There are currently no open positions.</h3>
+              <p className="text-ink-soft leading-relaxed mb-2">
+                Please check back later. When roles are available, they will be
+                published with clear information about the position, location,
+                and requirements.
+              </p>
+            </div>
+          </Card>
+        ) : (
+          <div className="mt-14 grid gap-5">
+            {jobs.map((job) => (
+              <Link
+                key={job.id}
+                href={`/careers/${job.slug}`}
+                className="group bg-white border border-line rounded-lg p-7 transition-all duration-300 hover:-translate-y-1 hover:shadow-elevated hover:border-navy-300"
+              >
+                <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-5">
+                  <div className="flex-1">
+                    <h3 className="text-h3 mb-3 group-hover:text-brass transition-colors">
+                      {job.title}
+                    </h3>
+                    <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-sm text-ink-soft">
+                      <span className="inline-flex items-center gap-1.5">
+                        <Briefcase className="w-4 h-4 text-ink-muted" />
+                        {job.department}
+                      </span>
+                      <span className="inline-flex items-center gap-1.5">
+                        <MapPin className="w-4 h-4 text-ink-muted" />
+                        {job.location}, {job.country}
+                      </span>
+                      <span className="inline-flex items-center gap-1.5">
+                        <Clock className="w-4 h-4 text-ink-muted" />
+                        {employmentLabel[job.employmentType]} · {workModeLabel[job.workMode]}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="text-sm font-medium text-navy-900 group-hover:text-brass transition-colors whitespace-nowrap">
+                    View Position →
+                  </div>
+                </div>
+              </Link>
+            ))}
           </div>
-        </Card>
+        )}
       </Section>
 
       <section className="bg-navy-950 text-white">
