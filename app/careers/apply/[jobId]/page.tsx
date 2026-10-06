@@ -43,10 +43,7 @@ export default async function ApplyPage({
       <section className="bg-white">
         <div className="container-wide py-14 lg:py-20">
           <div className="max-w-3xl mx-auto">
-            <ApplicationForm
-              jobId={job.id}
-              jobTitle={job.title}
-            />
+            <ApplicationForm jobId={job.id} jobTitle={job.title} />
           </div>
         </div>
       </section>

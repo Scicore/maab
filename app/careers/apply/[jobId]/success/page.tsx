@@ -30,8 +30,7 @@ export default function SuccessPage({
             </div>
             <p className="text-sm text-ink-soft leading-relaxed">
               <strong>Keep this ticket number.</strong> You will need it to
-              reference your application. We will contact you via email about
-              the status of your application.
+              reference your application.
             </p>
           </div>
 

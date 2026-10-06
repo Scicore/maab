@@ -120,22 +120,10 @@ export function ApplicationForm({
 
         <div className="grid sm:grid-cols-2 gap-5">
           <Field label="Years of Experience">
-            <input
-              type="number"
-              name="yearsExperience"
-              min={0}
-              max={60}
-              defaultValue={0}
-              className={inputClass}
-            />
+            <input type="number" name="yearsExperience" min={0} max={60} defaultValue={0} className={inputClass} />
           </Field>
           <Field label="Highest Qualification">
-            <input
-              type="text"
-              name="highestQualification"
-              placeholder="e.g. Bachelor's Degree"
-              className={inputClass}
-            />
+            <input type="text" name="highestQualification" placeholder="e.g. Bachelor Degree" className={inputClass} />
           </Field>
         </div>
 
@@ -144,24 +132,14 @@ export function ApplicationForm({
         </Field>
 
         <Field label="Key Skills">
-          <textarea
-            name="skills"
-            rows={3}
-            placeholder="Comma-separated list"
-            className={inputClass}
-          />
+          <textarea name="skills" rows={3} placeholder="Comma-separated list" className={inputClass} />
         </Field>
       </div>
 
       <div className="bg-white border border-line rounded-lg p-8 space-y-6">
         <h2 className="text-h3">Cover Letter</h2>
         <Field label="Why are you interested in this position?" required>
-          <textarea
-            name="coverLetter"
-            rows={8}
-            required
-            className={inputClass}
-          />
+          <textarea name="coverLetter" rows={8} required className={inputClass} />
         </Field>
       </div>
 
@@ -169,12 +147,7 @@ export function ApplicationForm({
         <h2 className="text-h3">Declarations</h2>
 
         <label className="flex gap-3 items-start text-[0.9375rem] text-ink-soft leading-relaxed">
-          <input
-            type="checkbox"
-            name="declaredAccurate"
-            required
-            className="mt-1"
-          />
+          <input type="checkbox" name="declaredAccurate" required className="mt-1" />
           <span>
             I confirm that the information provided in this application is
             accurate and complete to the best of my knowledge. *
@@ -182,12 +155,7 @@ export function ApplicationForm({
         </label>
 
         <label className="flex gap-3 items-start text-[0.9375rem] text-ink-soft leading-relaxed">
-          <input
-            type="checkbox"
-            name="declaredUnderstand"
-            required
-            className="mt-1"
-          />
+          <input type="checkbox" name="declaredUnderstand" required className="mt-1" />
           <span>
             I understand that submitting this application does not guarantee
             employment, an interview, or selection. *
@@ -195,12 +163,7 @@ export function ApplicationForm({
         </label>
 
         <label className="flex gap-3 items-start text-[0.9375rem] text-ink-soft leading-relaxed">
-          <input
-            type="checkbox"
-            name="declaredConsent"
-            required
-            className="mt-1"
-          />
+          <input type="checkbox" name="declaredConsent" required className="mt-1" />
           <span>
             I consent to MAAB processing the information in this application
             for recruitment purposes. *
