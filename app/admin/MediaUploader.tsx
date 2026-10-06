@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useState, useRef } from "react";
 import { Loader2, Upload, X, ImageIcon } from "lucide-react";
@@ -82,6 +82,7 @@ export function MediaUploader({
       {uploaded ? (
         <div className="border border-slate-200 rounded-md p-4 flex items-center gap-4 bg-slate-50">
           {uploaded.mimeType.startsWith("image/") && uploaded.previewUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
             <img
               src={uploaded.previewUrl}
               alt=""
