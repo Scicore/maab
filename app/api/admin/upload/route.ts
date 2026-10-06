@@ -4,13 +4,7 @@ import { prisma } from "@/lib/db";
 import { authOptions } from "@/lib/auth";
 import { supabaseAdmin, STORAGE_BUCKET } from "@/lib/supabase-admin";
 
-const IMAGE_TYPES = [
-  "image/jpeg",
-  "image/png",
-  "image/webp",
-  "image/svg+xml",
-];
-
+const IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp", "image/svg+xml"];
 const DOC_TYPES = [
   "application/pdf",
   "application/msword",
@@ -27,19 +21,6 @@ function detectCategory(mime: string): "image" | "document" | null {
   return null;
 }
 
-// Force ASCII-only, safe filename
-function asciiSafe(name: string): string {
-  return (
-    name
-      .normalize("NFKD")
-      .replace(/[^\x20-\x7E]/g, "")
-      .replace(/[^\w.\-]/g, "_")
-      .replace(/_+/g, "_")
-      .replace(/^_|_$/g, "")
-      .slice(-80) || "file"
-  );
-}
-
 export async function POST(req: Request) {
   const session = await getServerSession(authOptions);
   if (!session?.user) {
@@ -51,69 +32,83 @@ export async function POST(req: Request) {
 
   if (!supabaseAdmin) {
     return NextResponse.json(
-      { ok: false, error: "Storage is not configured" },
+      { ok: false, error: "Storage not configured" },
       { status: 500 }
     );
   }
 
   try {
-    const formData = await req.formData();
-    const file = formData.get("file") as File | null;
-    const folder =
-      String(formData.get("folder") || "misc").replace(/[^\w\-]/g, "") || "misc";
+    const contentType = req.headers.get("content-type") || "";
 
-    if (!file) {
+    if (!contentType.includes("multipart/form-data")) {
       return NextResponse.json(
-        { ok: false, error: "No file provided" },
+        { ok: false, error: "Expected multipart" },
         { status: 400 }
       );
     }
 
-    const category = detectCategory(file.type);
+    const boundaryMatch = contentType.match(/boundary=(?:"([^"]+)"|([^;]+))/);
+    const boundary = boundaryMatch?.[1] || boundaryMatch?.[2];
+    if (!boundary) {
+      return NextResponse.json(
+        { ok: false, error: "No boundary" },
+        { status: 400 }
+      );
+    }
+
+    const arrayBuffer = await req.arrayBuffer();
+    const bytes = new Uint8Array(arrayBuffer);
+    const parts = parseMultipart(bytes, boundary);
+
+    let fileBytes: Uint8Array | null = null;
+    let fileMime = "application/octet-stream";
+    let folder = "misc";
+
+    for (const part of parts) {
+      if (part.name === "file") {
+        fileBytes = part.data;
+        if (part.contentType) fileMime = part.contentType;
+      } else if (part.name === "folder") {
+        folder =
+          new TextDecoder().decode(part.data).replace(/[^\w\-]/g, "") ||
+          "misc";
+      }
+    }
+
+    if (!fileBytes || fileBytes.length === 0) {
+      return NextResponse.json(
+        { ok: false, error: "No file" },
+        { status: 400 }
+      );
+    }
+
+    const category = detectCategory(fileMime);
     if (!category) {
       return NextResponse.json(
-        { ok: false, error: "Unsupported file type: " + file.type },
+        { ok: false, error: "Unsupported type: " + fileMime },
         { status: 400 }
       );
     }
 
     const maxBytes = category === "image" ? MAX_IMAGE_BYTES : MAX_DOC_BYTES;
-    if (file.size > maxBytes) {
+    if (fileBytes.length > maxBytes) {
       return NextResponse.json(
-        {
-          ok: false,
-          error:
-            "File too large. Max " +
-            Math.round(maxBytes / 1024 / 1024) +
-            " MB.",
-        },
+        { ok: false, error: "File too large" },
         { status: 400 }
       );
     }
 
-    const buffer = Buffer.from(await file.arrayBuffer());
-
-    // Do NOT use file.name anywhere. Build our own name.
-    const originalSafe = asciiSafe(file.name || "upload");
-    const extMatch = originalSafe.match(/\.[a-zA-Z0-9]+$/);
-    const ext = extMatch ? extMatch[0].toLowerCase() : "";
-    const stem = originalSafe.replace(/\.[^.]+$/, "") || "upload";
-
+    const ext = fileMime.split("/")[1]?.replace("jpeg", "jpg") || "bin";
     const timestamp = Date.now().toString(36);
     const random = Math.random().toString(36).slice(2, 10);
-    const finalName = stem + "-" + timestamp + "-" + random + ext;
-
+    const finalName = "upload-" + timestamp + "-" + random + "." + ext;
     const path = folder + "/" + finalName;
 
-    // Give supabase a synthetic filename too, not file.name
-    const uploadBody = buffer;
+    const buffer = Buffer.from(fileBytes);
 
     const { error: uploadError } = await supabaseAdmin.storage
       .from(STORAGE_BUCKET)
-      .upload(path, uploadBody, {
-        contentType: file.type,
-        upsert: false,
-      });
+      .upload(path, buffer, { contentType: fileMime, upsert: false });
 
     if (uploadError) {
       console.error("[upload] supabase error", uploadError);
@@ -126,9 +121,9 @@ export async function POST(req: Request) {
     const media = await prisma.media.create({
       data: {
         filename: finalName,
-        originalName: originalSafe,
-        mimeType: file.type,
-        sizeBytes: file.size,
+        originalName: finalName,
+        mimeType: fileMime,
+        sizeBytes: fileBytes.length,
         storagePath: path,
         folder,
         uploadedById: (session.user as { id?: string }).id ?? null,
@@ -144,17 +139,76 @@ export async function POST(req: Request) {
       media: {
         id: media.id,
         path,
-        originalName: originalSafe,
-        mimeType: file.type,
-        sizeBytes: file.size,
+        originalName: finalName,
+        mimeType: fileMime,
+        sizeBytes: fileBytes.length,
         previewUrl: signed?.signedUrl ?? null,
       },
     });
   } catch (err) {
-    console.error("[upload] unexpected error", err);
+    console.error("[upload] error", err);
     return NextResponse.json(
-      { ok: false, error: "Upload failed unexpectedly" },
+      { ok: false, error: "Upload failed" },
       { status: 500 }
     );
   }
+}
+
+type Part = { name: string; contentType?: string; data: Uint8Array };
+
+function parseMultipart(bytes: Uint8Array, boundary: string): Part[] {
+  const parts: Part[] = [];
+  const encoder = new TextEncoder();
+  const boundaryBytes = encoder.encode("--" + boundary);
+  const crlf = encoder.encode("\r\n");
+  const doubleCrlf = encoder.encode("\r\n\r\n");
+
+  const indices: number[] = [];
+  for (let i = 0; i <= bytes.length - boundaryBytes.length; i++) {
+    let match = true;
+    for (let j = 0; j < boundaryBytes.length; j++) {
+      if (bytes[i + j] !== boundaryBytes[j]) {
+        match = false;
+        break;
+      }
+    }
+    if (match) indices.push(i);
+  }
+
+  for (let i = 0; i < indices.length - 1; i++) {
+    const start = indices[i] + boundaryBytes.length + crlf.length;
+    const end = indices[i + 1] - crlf.length;
+
+    let headerEnd = -1;
+    for (let j = start; j <= end - doubleCrlf.length; j++) {
+      let ok = true;
+      for (let k = 0; k < doubleCrlf.length; k++) {
+        if (bytes[j + k] !== doubleCrlf[k]) {
+          ok = false;
+          break;
+        }
+      }
+      if (ok) {
+        headerEnd = j;
+        break;
+      }
+    }
+    if (headerEnd === -1) continue;
+
+    const headerText = new TextDecoder().decode(bytes.slice(start, headerEnd));
+    const nameMatch = headerText.match(/name="([^"]+)"/);
+    const ctMatch = headerText.match(/Content-Type:\s*([^\r\n]+)/i);
+
+    const bodyStart = headerEnd + doubleCrlf.length;
+    const bodyEnd = end;
+    if (bodyEnd <= bodyStart) continue;
+
+    parts.push({
+      name: nameMatch?.[1] || "",
+      contentType: ctMatch?.[1]?.trim(),
+      data: bytes.slice(bodyStart, bodyEnd),
+    });
+  }
+
+  return parts;
 }
