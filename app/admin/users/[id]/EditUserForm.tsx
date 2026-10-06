@@ -12,7 +12,13 @@ type User = {
   status: string;
 };
 
-export function EditUserForm({ user, isSelf }: { user: User; isSelf: boolean }) {
+export function EditUserForm({
+  user,
+  isSelf,
+}: {
+  user: User;
+  isSelf: boolean;
+}) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -27,7 +33,6 @@ export function EditUserForm({ user, isSelf }: { user: User; isSelf: boolean }) 
 
     const form = e.currentTarget;
     const data = new FormData(form);
-
     const newPassword = String(data.get("newPassword") || "");
 
     const payload = {
@@ -44,9 +49,7 @@ export function EditUserForm({ user, isSelf }: { user: User; isSelf: boolean }) 
         body: JSON.stringify(payload),
       });
       const json = await res.json();
-      if (!res.ok || !json.ok) {
-        throw new Error(json.error || "Failed");
-      }
+      if (!res.ok || !json.ok) throw new Error(json.error || "Failed");
       setSuccess("Saved.");
       router.refresh();
     } catch (err) {
@@ -59,13 +62,9 @@ export function EditUserForm({ user, isSelf }: { user: User; isSelf: boolean }) 
   async function onDisable() {
     setLoading(true);
     try {
-      const res = await fetch("/api/admin/users/" + user.id, {
-        method: "DELETE",
-      });
+      const res = await fetch("/api/admin/users/" + user.id, { method: "DELETE" });
       const json = await res.json();
-      if (!res.ok || !json.ok) {
-        throw new Error(json.error || "Failed");
-      }
+      if (!res.ok || !json.ok) throw new Error(json.error || "Failed");
       router.push("/admin/users");
       router.refresh();
     } catch (err) {
@@ -99,28 +98,14 @@ export function EditUserForm({ user, isSelf }: { user: User; isSelf: boolean }) 
             disabled
             className={inputClass + " bg-slate-50 cursor-not-allowed"}
           />
-          <p className="text-xs text-slate-500 mt-1.5">
-            Email cannot be changed. Create a new account if needed.
-          </p>
         </Field>
 
         <Field label="Full Name" required>
-          <input
-            type="text"
-            name="name"
-            required
-            defaultValue={user.name}
-            className={inputClass}
-          />
+          <input type="text" name="name" required defaultValue={user.name} className={inputClass} />
         </Field>
 
         <Field label="Role" required>
-          <select
-            name="role"
-            required
-            defaultValue={user.role}
-            className={inputClass}
-          >
+          <select name="role" required defaultValue={user.role} className={inputClass}>
             <option value="SUPER_ADMIN">Super Admin</option>
             <option value="ADMIN">Administrator</option>
             <option value="RECRUITER">Recruiter</option>
@@ -131,12 +116,7 @@ export function EditUserForm({ user, isSelf }: { user: User; isSelf: boolean }) 
         </Field>
 
         <Field label="Status" required>
-          <select
-            name="status"
-            required
-            defaultValue={user.status}
-            className={inputClass}
-          >
+          <select name="status" required defaultValue={user.status} className={inputClass}>
             <option value="ACTIVE">Active</option>
             <option value="SUSPENDED">Suspended</option>
             <option value="DISABLED">Disabled</option>
@@ -144,14 +124,9 @@ export function EditUserForm({ user, isSelf }: { user: User; isSelf: boolean }) 
         </Field>
 
         <Field label="New Password (optional)">
-          <input
-            type="password"
-            name="newPassword"
-            minLength={12}
-            className={inputClass}
-          />
+          <input type="password" name="newPassword" minLength={12} className={inputClass} />
           <p className="text-xs text-slate-500 mt-1.5">
-            Leave blank to keep the current password. Minimum 12 characters if changing.
+            Leave blank to keep the current password.
           </p>
         </Field>
       </div>

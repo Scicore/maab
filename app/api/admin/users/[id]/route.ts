@@ -90,16 +90,7 @@ export async function PATCH(
       },
     });
 
-    return NextResponse.json({
-      ok: true,
-      user: {
-        id: user.id,
-        email: user.email,
-        name: user.name,
-        role: user.role,
-        status: user.status,
-      },
-    });
+    return NextResponse.json({ ok: true });
   } catch (err) {
     console.error("[admin/users/:id] error", err);
     return NextResponse.json(
@@ -122,10 +113,9 @@ export async function DELETE(
   }
 
   try {
-    // Prevent deleting yourself
     if ((session.user as { id?: string }).id === params.id) {
       return NextResponse.json(
-        { ok: false, error: "You cannot delete your own account" },
+        { ok: false, error: "You cannot disable your own account" },
         { status: 400 }
       );
     }
@@ -138,7 +128,6 @@ export async function DELETE(
       );
     }
 
-    // Soft-disable rather than delete, to keep audit trail intact
     await prisma.user.update({
       where: { id: params.id },
       data: { status: "DISABLED" },
