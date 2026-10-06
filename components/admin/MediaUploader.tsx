@@ -30,21 +30,30 @@ export function MediaUploader({
   const [error, setError] = useState("");
   const [uploaded, setUploaded] = useState<UploadedMedia | null>(value ?? null);
 
-   async function handleFile(file: File) {
+  async function handleFile(file: File) {
     setError("");
 
-    // Client-side filename check: reject non-ASCII before uploading
-    if (/[^\x20-\x7E]/.test(file.name)) {
-      setError(
-        "Filename contains non-English characters (emoji, arrows, etc.). Please rename the file and try again."
-      );
-      if (inputRef.current) inputRef.current.value = "";
-      return;
-    }
+    // Sanitize filename BEFORE building FormData.
+    // The multipart header is Latin-1 only, so non-ASCII names break fetch().
+    const extMatch = file.name.match(/\.[a-zA-Z0-9]+$/);
+    const ext = extMatch ? extMatch[0] : ".png";
+    const baseName =
+      file.name
+        .replace(/\.[^.]+$/, "")
+        .normalize("NFKD")
+        .replace(/[^\x20-\x7E]/g, "")
+        .replace(/[^\w.\-]/g, "_")
+        .replace(/_+/g, "_")
+        .replace(/^_|_$/g, "")
+        .slice(0, 60) || "file";
+
+    const safeFileName = `${baseName}${ext}`;
+    const safeFile = new File([file], safeFileName, { type: file.type });
 
     setUploading(true);
+
     const fd = new FormData();
-    fd.append("file", file);
+    fd.append("file", safeFile);
     fd.append("folder", folder);
 
     try {
@@ -91,7 +100,7 @@ export function MediaUploader({
               {uploaded.originalName}
             </div>
             <div className="text-xs text-slate-500">
-              {Math.round(uploaded.sizeBytes / 1024)} KB · uploaded
+              {Math.round(uploaded.sizeBytes / 1024)} KB - uploaded
             </div>
           </div>
           <button
@@ -113,14 +122,14 @@ export function MediaUploader({
           {uploading ? (
             <>
               <Loader2 className="w-5 h-5 text-slate-400 animate-spin" />
-              <span className="text-sm text-slate-500">Uploading…</span>
+              <span className="text-sm text-slate-500">Uploading...</span>
             </>
           ) : (
             <>
               <Upload className="w-5 h-5 text-slate-400" />
               <span className="text-sm font-medium text-slate-700">{label}</span>
               <span className="text-xs text-slate-500">
-                Click to select · max 5 MB
+                Click to select - max 5 MB
               </span>
             </>
           )}
